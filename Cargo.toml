@@ -1,0 +1,31 @@
+[package]
+name = "kidstime-pro"
+version = "1.0.0"
+edition = "2021"
+description = "Parental control for Windows with remote phone monitoring"
+
+[dependencies]
+eframe = "0.29"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+axum = "0.7"
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+sha2 = "0.10"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+ureq = "2"
+futures-util = "0.3"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Threading",
+    "Win32_System_Diagnostics_ToolHelp",
+] }
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true

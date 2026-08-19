@@ -1,0 +1,16 @@
+/target
+dist/
+build/
+*.spec
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+.vscode/
+.idea/
+kidstime_config.json
+kidstime_state.json
+kidstime_history.json
+Thumbs.db
+.DS_Store
