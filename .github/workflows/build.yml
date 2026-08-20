@@ -3,6 +3,11 @@ name: Build Windows EXE
 on:
   push:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/build.yml'
   workflow_dispatch:
 
 jobs:
@@ -19,14 +24,44 @@ jobs:
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          key: v1
+          key: windows-latest
 
       - name: Build release
         run: cargo build --release
 
+      - name: Get exe info
+        id: exe_info
+        shell: pwsh
+        run: |
+          $exePath = "target/release/kidstime-rs.exe"
+          if (Test-Path $exePath) {
+            $size = (Get-Item $exePath).Length / 1MB
+            echo "size_mb=$([math]::Round($size, 2))" >> $env:GITHUB_OUTPUT
+            echo "exists=true" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "exists=false" >> $env:GITHUB_OUTPUT
+          }
+
       - name: Upload EXE artifact
+        if: steps.exe_info.outputs.exists == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: kidstime-pro-windows
-          path: target/release/kidstime-pro.exe
+          path: target/release/kidstime-rs.exe
           retention-days: 30
+
+      - name: Create Release
+        if: steps.exe_info.outputs.exists == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v1.0.0-build.${{ github.run_number }}"
+          name: "KidsTime Pro v1.0.0 build #${{ github.run_number }}"
+          body: |
+            Windows build #${{ github.run_number }}
+            Size: ${{ steps.exe_info.outputs.size_mb }} MB
+            Commit: ${{ github.sha }}
+          files: target/release/kidstime-rs.exe
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
