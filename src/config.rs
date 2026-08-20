@@ -118,7 +118,7 @@ impl ConfigManager {
         let base_dir = std::env::current_exe()
             .unwrap_or_else(|_| PathBuf::from("."))
             .parent()
-            .unwrap_or(PathBuf::from("."))
+            .unwrap_or(Path::new("."))
             .to_path_buf();
 
         let config_path = base_dir.join("kidstime_config.json");
@@ -305,8 +305,8 @@ fn parse_time(s: &str) -> chrono::NaiveTime {
     if parts.len() == 2 {
         let h: u32 = parts[0].parse().unwrap_or(0);
         let m: u32 = parts[1].parse().unwrap_or(0);
-        chrono::NaiveTime::from_hms_opt(h, m).unwrap_or(chrono::NaiveTime::from_hms_opt(0, 0).unwrap())
+        chrono::NaiveTime::from_hms_opt(h, m, 0).unwrap_or(chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap())
     } else {
-        chrono::NaiveTime::from_hms_opt(0, 0).unwrap()
+        chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap()
     }
 }
