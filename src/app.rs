@@ -271,6 +271,7 @@ impl KidsTimeApp {
             self.new_pw.clear();
             self.confirm_pw.clear();
             self.setup_error.clear();
+            drop(cfg);
             self.toast("Password updated.");
         }
     }
@@ -578,7 +579,7 @@ impl KidsTimeApp {
                 });
         }
 
-        frame.set_min_size(egui::vec2(640.0, 480.0));
+        // Min size is set via ViewportBuilder in NativeOptions (main.rs)
     }
 
     // ── Dashboard tab ──────────────────────────────────────────────────
@@ -792,7 +793,8 @@ impl KidsTimeApp {
 
     fn extra_time_dialog(&mut self, ctx: &egui::Context) {
         let mut open = true;
-        egui::Window::new("Grant Extra Time")
+        let mut close = false;
+        let response = egui::Window::new("Grant Extra Time")
             .collapsible(false)
             .resizable(false)
             .open(&mut open)
@@ -803,14 +805,16 @@ impl KidsTimeApp {
                 ui.add_space(8.0);
                 ui.horizontal(|ui| {
                     if ui.add_sized([100.0, 28.0], egui::Button::new("Grant")).clicked() {
-                        self.grant_extra_time();
-                        open = false;
+                        close = true;
                     }
                     if ui.add_sized([80.0, 28.0], egui::Button::new("Cancel")).clicked() {
-                        open = false;
+                        close = true;
                     }
                 });
             });
+        if close {
+            self.grant_extra_time();
+        }
     }
 
     // ── Settings tab ───────────────────────────────────────────────────
@@ -1201,11 +1205,7 @@ impl eframe::App for KidsTimeApp {
         }
     }
 
-    fn on_close_event(&mut self) -> bool {
-        // Keep running -- this is a system tray app.  Return false so the
-        // caller can hide the window instead of exiting.
-        false
-    }
+
 }
 
 // ── Utility ─────────────────────────────────────────────────────────────
