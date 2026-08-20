@@ -102,9 +102,9 @@ async fn relay_loop(shared: SharedConfig, running: Arc<std::sync::atomic::Atomic
                         let cfg = status_shared.lock().unwrap_or_else(|e| e.into_inner());
                         let snapshot = build_status_snapshot(&cfg);
                         drop(cfg);
-                        // Note: we can't send from here because write is moved
-                        // Status updates will be sent in the main read loop
-                        let _ = (status_code, snapshot);
+                        // Note: status_code available here if needed later
+                        let _ = &status_code;
+                        let _ = &snapshot;
                     }
                 });
 
