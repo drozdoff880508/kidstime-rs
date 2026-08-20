@@ -31,4 +31,4 @@ lto = true
 strip = true
 
 [patch.crates-io]
-arrayref = { git = "https://github.com/droundy/arrayref", rev = "27759470da9b091e0fc1217d394b4531a73f8235" }
+arrayref = { git = "https://github.com/droundy/arrayref", rev = "f8d0299d863922db6c409d08098941e833b70d69" }
