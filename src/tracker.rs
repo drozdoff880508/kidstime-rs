@@ -46,13 +46,7 @@ async fn tracking_loop(shared: SharedConfig) {
 
             cfg.add_session_minute();
 
-            // Track active window
-            if cfg.config.track_apps {
-                let info = winapi::get_active_window_info();
-                cfg.update_active_window(&info.window, &info.process);
-                cfg.history.record(&info.window, &info.process);
-            }
-
+            let track_apps = cfg.config.track_apps;
             let daily_rem = cfg.remaining_daily();
             let session_rem = cfg.remaining_session();
 
@@ -61,6 +55,17 @@ async fn tracking_loop(shared: SharedConfig) {
 
             if should_break_session {
                 cfg.reset_session();
+            }
+            drop(cfg); // Release lock BEFORE Win32 call
+
+            // Track active window — outside mutex to avoid blocking UI
+            if track_apps {
+                let info = winapi::get_active_window_info();
+                if !info.window.is_empty() {
+                    let mut cfg = shared.lock().unwrap_or_else(|e| e.into_inner());
+                    cfg.update_active_window(&info.window, &info.process);
+                    cfg.history.record(&info.window, &info.process);
+                }
             }
         }
 

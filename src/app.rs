@@ -39,6 +39,40 @@ struct SnapState {
     current_process: String,
 }
 
+impl Default for SnapConfig {
+    fn default() -> Self {
+        Self {
+            daily_limit: 120,
+            session_limit: 60,
+            schedule_enabled: true,
+            schedule_start: "09:00".into(),
+            schedule_end: "21:00".into(),
+            lock_on_limit: true,
+            web_enabled: true,
+            web_port: 8080,
+            track_apps: true,
+            web_token: String::new(),
+            duckdns_domain: String::new(),
+            duckdns_token: String::new(),
+            cloud_enabled: false,
+            cloud_relay_url: String::new(),
+            cloud_device_code: String::new(),
+        }
+    }
+}
+
+impl Default for SnapState {
+    fn default() -> Self {
+        Self {
+            minutes_used_today: 0,
+            session_minutes: 0,
+            is_blocked: false,
+            current_window: String::new(),
+            current_process: String::new(),
+        }
+    }
+}
+
 impl SnapConfig {
     fn from_mgr(mgr: &crate::config::ConfigManager) -> Self {
         let c = &mgr.config;
@@ -112,6 +146,10 @@ pub struct KidsTimeApp {
     // Status message (shown briefly)
     toast: String,
     toast_time: std::time::Instant,
+    // Cached web URLs (refreshed every 10s, outside mutex)
+    cached_local_url: String,
+    cached_public_url: String,
+    urls_last_refresh: std::time::Instant,
 }
 
 impl KidsTimeApp {
@@ -151,6 +189,9 @@ impl KidsTimeApp {
             last_tick: std::time::Instant::now(),
             toast: String::new(),
             toast_time: std::time::Instant::now(),
+            cached_local_url: String::new(),
+            cached_public_url: String::new(),
+            urls_last_refresh: std::time::Instant::now() - std::time::Duration::from_secs(20),
         }
     }
 
@@ -165,17 +206,61 @@ impl KidsTimeApp {
         self.toast_time.elapsed().as_secs() < 3
     }
 
-    /// Snapshot everything we need from the shared config in one lock acquisition.
-    fn snap(&self) -> (SnapConfig, SnapState, f64, f64, bool, String, String) {
-        let cfg = self.shared.lock().unwrap_or_else(|e| e.into_inner());
+    /// Snapshot config & state in one short lock acquisition.
+    /// Network calls (local_ip, public_url) are cached and refreshed separately.
+    fn snap(&self) -> (SnapConfig, SnapState, f64, f64, bool) {
+        let cfg = match self.shared.try_lock() {
+            Ok(guard) => guard,
+            Err(_) => return (SnapConfig::default(), SnapState::default(), 0.0, 0.0, true),
+        };
         let sc = SnapConfig::from_mgr(&cfg);
         let ss = SnapState::from_mgr(&cfg);
         let rd = cfg.remaining_daily();
         let rs = cfg.remaining_session();
         let sched = cfg.is_in_schedule();
-        let local = cfg.get_local_url();
-        let pub_url = cfg.get_public_url("");
-        (sc, ss, rd, rs, sched, local, pub_url)
+        (sc, ss, rd, rs, sched)
+    }
+
+    /// Return cached web URLs, refreshing them every 10 seconds.
+    /// This avoids doing UDP/DNS inside the UI frame.
+    fn cached_urls(&mut self, _ctx: &egui::Context) -> (String, String) {
+        if self.urls_last_refresh.elapsed() >= std::time::Duration::from_secs(10) {
+            self.urls_last_refresh = std::time::Instant::now();
+            // Compute URLs outside of mutex — only read what we need
+            let (port, web_enabled, duckdns, cloud_enabled, cloud_url, cloud_code) = {
+                let cfg = self.shared.lock().unwrap_or_else(|e| e.into_inner());
+                let c = &cfg.config;
+                (
+                    c.web_port,
+                    c.web_enabled,
+                    c.duckdns_domain.clone(),
+                    c.cloud_enabled,
+                    c.cloud_relay_url.clone(),
+                    c.cloud_device_code.clone(),
+                )
+            };
+            if web_enabled {
+                let ip = crate::utils::get_local_ip();
+                self.cached_local_url = format!("http://{}:{}", ip, port);
+
+                if cloud_enabled && !cloud_url.is_empty() && !cloud_code.is_empty() {
+                    self.cached_public_url = format!("{}/{}", cloud_url.trim_end_matches('/'), cloud_code);
+                } else if !duckdns.is_empty() {
+                    let domain = if duckdns.contains('.') {
+                        duckdns.clone()
+                    } else {
+                        format!("{}.duckdns.org", duckdns)
+                    };
+                    self.cached_public_url = format!("http://{}:{}", domain, port);
+                } else {
+                    self.cached_public_url = String::new();
+                }
+            } else {
+                self.cached_local_url = String::new();
+                self.cached_public_url = String::new();
+            }
+        }
+        (self.cached_local_url.clone(), self.cached_public_url.clone())
     }
 
     fn sync_scratch_from_config(&mut self) {
@@ -505,7 +590,7 @@ impl KidsTimeApp {
 
         // Bottom status bar
         egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
-            let (_, ss, _, _, in_schedule, _, _) = self.snap();
+            let (_, ss, _, _, in_schedule) = self.snap();
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 16.0;
                 if ss.is_blocked {
@@ -585,7 +670,10 @@ impl KidsTimeApp {
     // ── Dashboard tab ──────────────────────────────────────────────────
 
     fn ui_dashboard_tab(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        let (sc, ss, rem_daily, rem_session, in_schedule, local_url, pub_url) = self.snap();
+        let (sc, ss, rem_daily, rem_session, in_schedule) = self.snap();
+
+        // Compute web URLs outside of mutex lock (cached, updated every 10s)
+        let (local_url, pub_url) = self.cached_urls(ui.ctx());
         let daily_frac = if sc.daily_limit > 0 {
             rem_daily / sc.daily_limit as f64
         } else {
@@ -1189,9 +1277,12 @@ impl eframe::App for KidsTimeApp {
         // Dark theme
         ctx.set_visuals(egui::Visuals::dark());
 
+        // Use try_lock to avoid blocking the UI thread if another thread holds the mutex
         let (blocked, first_run) = {
-            let cfg = self.shared.lock().unwrap_or_else(|e| e.into_inner());
-            (cfg.state.is_blocked, cfg.is_first_run())
+            match self.shared.try_lock() {
+                Ok(cfg) => (cfg.state.is_blocked, cfg.is_first_run()),
+                Err(_) => (false, self.authenticated), // skip update this frame
+            }
         };
 
         if first_run {
