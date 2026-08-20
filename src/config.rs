@@ -290,7 +290,7 @@ pub fn hash_password(password: &str) -> String {
 }
 
 pub fn generate_token() -> String {
-    Uuid::new_v4().to_simple().to_string()
+    Uuid::new_v4().simple().to_string()
 }
 
 pub fn format_time(minutes: f64) -> String {
