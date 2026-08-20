@@ -33,7 +33,7 @@ jobs:
         id: exe_info
         shell: pwsh
         run: |
-          $exePath = "target/release/kidstime-rs.exe"
+          $exePath = "target/release/kidstime-pro.exe"
           if (Test-Path $exePath) {
             $size = (Get-Item $exePath).Length / 1MB
             echo "size_mb=$([math]::Round($size, 2))" >> $env:GITHUB_OUTPUT
@@ -47,7 +47,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kidstime-pro-windows
-          path: target/release/kidstime-rs.exe
+          path: target/release/kidstime-pro.exe
           retention-days: 30
 
       - name: Create Release
@@ -60,7 +60,7 @@ jobs:
             Windows build #${{ github.run_number }}
             Size: ${{ steps.exe_info.outputs.size_mb }} MB
             Commit: ${{ github.sha }}
-          files: target/release/kidstime-rs.exe
+          files: target/release/kidstime-pro.exe
           draft: false
           prerelease: true
         env:
