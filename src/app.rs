@@ -4,6 +4,7 @@ use eframe::egui;
 
 // ── Tab enum ────────────────────────────────────────────────────────────
 
+#[derive(PartialEq, Clone, Copy)]
 enum Tab {
     Dashboard,
     Settings,
@@ -308,7 +309,7 @@ impl KidsTimeApp {
     fn ui_first_run(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical_centered(|ui| {
-                ui.add_space(ui.available_height() * 0.20);
+                ui.add_space(ui.available_height() * 0.20_f32);
                 ui.label(
                     egui::RichText::new("KidsTime Pro")
                         .size(32.0)
@@ -364,7 +365,7 @@ impl KidsTimeApp {
     fn ui_login(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical_centered(|ui| {
-                ui.add_space(ui.available_height() * 0.30);
+                ui.add_space(ui.available_height() * 0.30_f32);
                 ui.label(
                     egui::RichText::new("KidsTime Pro")
                         .size(28.0)
@@ -408,7 +409,7 @@ impl KidsTimeApp {
     fn ui_blocked(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical_centered(|ui| {
-                ui.add_space(ui.available_height() * 0.15);
+                ui.add_space(ui.available_height() * 0.15_f32);
                 ui.label(
                     egui::RichText::new("!")
                         .size(64.0)
@@ -451,13 +452,15 @@ impl KidsTimeApp {
                     }
                 });
                 ui.add_space(24.0);
-                ui.label(
-                    egui::RichText::new(
-                        "Ask a parent or guardian to enter the password.\nThe screen will lock automatically.",
+                ui.add(
+                    egui::Label::new(
+                        egui::RichText::new(
+                            "Ask a parent or guardian to enter the password.\nThe screen will lock automatically.",
+                        )
+                        .size(13.0)
+                        .color(egui::Color32::GRAY)
                     )
-                    .size(13.0)
-                    .color(egui::Color32::GRAY)
-                    .wrap(),
+                    .wrap_mode(egui::TextWrapMode::Wrap),
                 );
             });
         });
@@ -465,7 +468,7 @@ impl KidsTimeApp {
 
     // ── Main authenticated UI ──────────────────────────────────────────
 
-    fn ui_authenticated(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui_authenticated(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         // Top bar
         egui::TopBottomPanel::top("top_bar").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
@@ -575,6 +578,7 @@ impl KidsTimeApp {
                 });
         }
 
+        frame.set_min_size(egui::vec2(640.0, 480.0));
     }
 
     // ── Dashboard tab ──────────────────────────────────────────────────
@@ -775,7 +779,7 @@ impl KidsTimeApp {
                     bar_height / 2.0,
                     egui::Color32::from_rgba_premultiplied(255, 255, 255, 20),
                 );
-                let fill_frac = fraction.clamp(0.0, 1.0);
+                let fill_frac = (fraction.clamp(0.0, 1.0)) as f32;
                 if fill_frac > 0.0 {
                     let fill_rect = egui::Rect::from_min_max(
                         rect.min,
@@ -1092,7 +1096,7 @@ impl KidsTimeApp {
                 ui.horizontal(|ui| {
                     ui.set_width(ui.available_width());
                     let bar_max_w = (ui.available_width() - 180.0).max(4.0);
-                    let bar_width = (*minutes as f64 / max_min as f64) * bar_max_w;
+                    let bar_width = (*minutes as f32 / max_min as f32) * bar_max_w;
 
                     ui.label(egui::RichText::new(app).size(12.0));
                     ui.add_space(8.0);
@@ -1197,9 +1201,9 @@ impl eframe::App for KidsTimeApp {
         }
     }
 
-    fn can_close(&mut self, _ctx: &egui::Context) -> bool {
-        // Keep running -- this is a parental control app.
-        // Return false so the window stays alive.
+    fn on_close_event(&mut self) -> bool {
+        // Keep running -- this is a system tray app.  Return false so the
+        // caller can hide the window instead of exiting.
         false
     }
 }
