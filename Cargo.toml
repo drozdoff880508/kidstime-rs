@@ -5,7 +5,7 @@ edition = "2021"
 description = "Parental control for Windows with remote phone monitoring"
 
 [dependencies]
-eframe = "0.36"
+eframe = "0.29"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
@@ -30,5 +30,5 @@ opt-level = 3
 lto = true
 strip = true
 
-[patch.crates-io]
-arrayref = { git = "https://github.com/droundy/arrayref", rev = "f8d0299d863922db6c409d08098941e833b70d69" }
+[patch."https://github.com/droundy/arrayref"]
+arrayref = "0.3"
