@@ -1,4 +1,17 @@
-mod app;mod config;mod history;mod relay;mod server;mod tracker;mod utils;mod web_html;mod winapi;use server::SharedConfig;use std::sync::{Arc, Mutex};fn main() -> eframe::Result<()> {
+mod app;
+mod config;
+mod history;
+mod relay;
+mod server;
+mod tracker;
+mod utils;
+mod web_html;
+mod winapi;
+
+use server::SharedConfig;
+use std::sync::{Arc, Mutex};
+
+fn main() -> eframe::Result<()> {
     // Shared state
     let config_mgr = config::ConfigManager::new();
     let shared: SharedConfig = Arc::new(Mutex::new(config_mgr));
@@ -66,8 +79,6 @@ mod app;mod config;mod history;mod relay;mod server;mod tracker;mod utils;mod we
     eframe::run_native(
         "KidsTime Pro",
         options,
-        Box::move |_cc| {
-            Ok(Box::new(app::KidsTimeApp::new(shared)))
-        }),
+        |_cc| Ok(Box::new(app::KidsTimeApp::new(shared))),
     )
 }
