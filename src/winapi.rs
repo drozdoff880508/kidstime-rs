@@ -2,14 +2,14 @@
 
 #[cfg(windows)]
 use windows::Win32::{
-    Foundation::HWND,
+    Foundation::{CloseHandle, HWND},
     System::Diagnostics::ToolHelp::{
         CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
         TH32CS_SNAPPROCESS,
     },
+    System::Shutdown::LockWorkStation,
     UI::WindowsAndMessaging::{
         GetForegroundWindow, GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId,
-        LockWorkStation,
     },
 };
 
@@ -46,8 +46,10 @@ pub fn get_active_window_info() -> ActiveWindowInfo {
         // Window title
         let len = GetWindowTextLengthW(hwnd);
         if len > 0 {
-            let mut buf = vec![0u16; (len + 1) as usize];
-            GetWindowTextW(hwnd, &mut buf);
+            let buf_len = (len + 1) as usize;
+            let mut buf = vec![0u16; buf_len];
+            let pstr = windows::core::PWSTR::from_raw(buf.as_mut_ptr());
+            GetWindowTextW(hwnd, pstr, buf_len as i32);
             if let Some(s) = String::from_utf16(&buf) {
                 result.window = s.trim_end_matches('\0').to_string();
             }
@@ -55,7 +57,7 @@ pub fn get_active_window_info() -> ActiveWindowInfo {
 
         // Process name via PID + ToolHelp
         let mut pid: u32 = 0;
-        GetWindowThreadProcessId(hwnd, Some(&mut pid));
+        GetWindowThreadProcessId(hwnd, Some(&mut pid as *mut u32));
 
         if pid > 0 {
             result.process = get_process_name_by_pid(pid);
@@ -88,7 +90,7 @@ fn get_process_name_by_pid(target_pid: u32) -> String {
 
         let mut found = String::new();
 
-        if Process32FirstW(snapshot, &mut entry).is_ok() {
+        if Process32FirstW(snapshot, &mut entry as *mut PROCESSENTRY32W).is_ok() {
             loop {
                 if entry.th32ProcessID == target_pid {
                     if let Some(s) = String::from_utf16(
@@ -98,13 +100,13 @@ fn get_process_name_by_pid(target_pid: u32) -> String {
                     }
                     break;
                 }
-                if Process32NextW(snapshot, &mut entry).is_err() {
+                if Process32NextW(snapshot, &mut entry as *mut PROCESSENTRY32W).is_err() {
                     break;
                 }
             }
         }
 
-        let _ = windows::Win32::Foundation::CloseHandle(snapshot);
+        let _ = CloseHandle(snapshot);
         if found.is_empty() { "Unknown".to_string() } else { found }
     }
 }
