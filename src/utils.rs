@@ -1,8 +1,11 @@
 use std::net::UdpSocket;
 
 pub fn get_local_ip() -> String {
-    UdpSocket::connect("8.8.8.8:80")
+    // In Rust 1.97, UdpSocket::connect is a method, not a static function.
+    // Bind to any address, then connect to determine local interface.
+    UdpSocket::bind("0.0.0.0:0")
         .ok()
+        .and_then(|s| s.connect("8.8.8.8:80").ok().map(|_| s))
         .and_then(|s| s.local_addr().ok())
         .map(|a| a.ip().to_string())
         .unwrap_or_else(|| "127.0.0.1".to_string())
