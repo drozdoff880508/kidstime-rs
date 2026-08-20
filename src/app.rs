@@ -150,6 +150,8 @@ pub struct KidsTimeApp {
     cached_local_url: String,
     cached_public_url: String,
     urls_last_refresh: std::time::Instant,
+    // First-run flag (set once in constructor, never changes)
+    is_first_run: bool,
 }
 
 impl KidsTimeApp {
@@ -192,6 +194,7 @@ impl KidsTimeApp {
             cached_local_url: String::new(),
             cached_public_url: String::new(),
             urls_last_refresh: std::time::Instant::now() - std::time::Duration::from_secs(20),
+            is_first_run: first,
         }
     }
 
@@ -1278,14 +1281,14 @@ impl eframe::App for KidsTimeApp {
         ctx.set_visuals(egui::Visuals::dark());
 
         // Use try_lock to avoid blocking the UI thread if another thread holds the mutex
-        let (blocked, first_run) = {
+        let blocked = {
             match self.shared.try_lock() {
-                Ok(cfg) => (cfg.state.is_blocked, cfg.is_first_run()),
-                Err(_) => (false, self.authenticated), // skip update this frame
+                Ok(cfg) => cfg.state.is_blocked,
+                Err(_) => false, // skip check this frame, reuse last known state
             }
         };
 
-        if first_run {
+        if self.is_first_run {
             self.ui_first_run(ctx);
         } else if blocked && !self.authenticated {
             self.ui_blocked(ctx);
