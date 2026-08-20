@@ -48,9 +48,8 @@ pub fn get_active_window_info() -> ActiveWindowInfo {
         if len > 0 {
             let buf_len = (len + 1) as usize;
             let mut buf = vec![0u16; buf_len];
-            let pstr = windows::core::PWSTR::from_raw(buf.as_mut_ptr());
-            GetWindowTextW(hwnd, pstr, buf_len as i32);
-            if let Some(s) = String::from_utf16(&buf) {
+            GetWindowTextW(hwnd, &mut buf);
+            if let Ok(s) = String::from_utf16(&buf) {
                 result.window = s.trim_end_matches('\0').to_string();
             }
         }
@@ -93,9 +92,8 @@ fn get_process_name_by_pid(target_pid: u32) -> String {
         if Process32FirstW(snapshot, &mut entry as *mut PROCESSENTRY32W).is_ok() {
             loop {
                 if entry.th32ProcessID == target_pid {
-                    if let Some(s) = String::from_utf16(
-                        &entry.szExeFile[..entry.szExeFile.iter().position(|&c| c == 0).unwrap_or(0)],
-                    ) {
+                    let end = entry.szExeFile.iter().position(|&c| c == 0).unwrap_or(0);
+                    if let Ok(s) = String::from_utf16(&entry.szExeFile[..end]) {
                         found = s;
                     }
                     break;
