@@ -57,7 +57,7 @@ async fn relay_loop(shared: SharedConfig, running: Arc<std::sync::atomic::Atomic
                 // Generate code
                 let mut cfg = shared.lock().unwrap_or_else(|e| e.into_inner());
                 cfg.config.cloud_device_code = uuid::Uuid::new_v4()
-                    .to_simple()
+                    .simple()
                     .to_string()[..6]
                     .to_uppercase();
                 cfg.save_config();
