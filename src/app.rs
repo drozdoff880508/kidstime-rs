@@ -465,7 +465,7 @@ impl KidsTimeApp {
 
     // ── Main authenticated UI ──────────────────────────────────────────
 
-    fn ui_authenticated(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn ui_authenticated(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Top bar
         egui::TopBottomPanel::top("top_bar").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
@@ -575,7 +575,6 @@ impl KidsTimeApp {
                 });
         }
 
-        frame.set_min_size(egui::vec2(640.0, 480.0));
     }
 
     // ── Dashboard tab ──────────────────────────────────────────────────
@@ -1198,9 +1197,9 @@ impl eframe::App for KidsTimeApp {
         }
     }
 
-    fn on_close_event(&mut self) -> bool {
-        // Keep running -- this is a system tray app.  Return false so the
-        // caller can hide the window instead of exiting.
+    fn can_close(&mut self, _ctx: &egui::Context) -> bool {
+        // Keep running -- this is a parental control app.
+        // Return false so the window stays alive.
         false
     }
 }
