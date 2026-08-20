@@ -5,7 +5,7 @@ edition = "2021"
 description = "Parental control for Windows with remote phone monitoring"
 
 [dependencies]
-eframe = "0.29"
+eframe = "0.36"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
