@@ -340,6 +340,7 @@ impl KidsTimeApp {
             cfg.set_password(&self.new_pw);
             drop(cfg);
             self.authenticated = true;
+            self.is_first_run = false;
             self.setup_error.clear();
             self.new_pw.clear();
             self.confirm_pw.clear();
