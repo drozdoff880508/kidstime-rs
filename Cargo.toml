@@ -14,7 +14,7 @@ tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
 sha2 = "0.10"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
-ureq = "2"
+ureq = { version = "2", default-features = false, features = ["native-tls", "json"] }
 futures-util = "0.3"
 
 [target.'cfg(windows)'.dependencies]
@@ -30,5 +30,3 @@ opt-level = 3
 lto = true
 strip = true
 
-[patch."https://github.com/droundy/arrayref"]
-arrayref = "0.3"
